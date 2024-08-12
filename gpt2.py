@@ -7,8 +7,11 @@ from dataclasses import dataclass
 import torch
 import torch.nn as nn
 from torch.nn import functional as F
-#from hellaswag import render_example, iterate_examples
+import tiktoken
+import torch._dynamo
+torch._dynamo.config.suppress_errors = True
 
+#from hellaswag import render_example, iterate_examples
 
 
 class CausalSelfAttention(nn.Module):
@@ -50,6 +53,7 @@ class MLP(nn.Module):
          self.c_fc = nn.Linear(config.n_embd, 4*config.n_embd)
          self.gelu = nn.GELU(approximate='tanh')
          self.c_proj = nn.Linear(4*config.n_embd, config.n_embd)
+         self.c_proj.NANOGPT_SCALE_INIT =1
 
     def forward(self, x):
         x= self.c_fc(x)
@@ -113,11 +117,17 @@ class GPT(nn.Module):
     def forward(self, idx, targets=None):
         # idx is of shape (B, T)
         B, T = idx.size()
+        
         assert T <= self.config.block_size, f"Cannot forward sequence of length {T}, block size is only {self.config.block_size}"
+       
         # forward the token and posisition embeddings
         pos = torch.arange(0, T, dtype=torch.long, device=idx.device) # shape (T)
+        
         pos_emb = self.transformer.wpe(pos) # position embeddings of shape (T, n_embd)
+        import sys; sys.exit(0)
         tok_emb = self.transformer.wte(idx) # token embeddings of shape (B, T, n_embd)
+
+        
         x = tok_emb + pos_emb
         # forward the blocks of the transformer
         for block in self.transformer.h:
@@ -128,6 +138,8 @@ class GPT(nn.Module):
         loss = None
         if targets is not None:
             loss = F.cross_entropy(logits.view(-1, logits.size(-1)), targets.view(-1))
+        
+        
         return logits, loss
 
     @classmethod
@@ -216,6 +228,42 @@ class GPT(nn.Module):
         optimizer = torch.optim.AdamW(optim_groups, lr=learning_rate, betas=(0.9, 0.95), eps=1e-8, fused=use_fused)
         return optimizer
     
+class DataLoaderLite:
+    def __init__(self, B, T):
+        self.B = B
+        self.T = T
+        
+        #at init load the data from disk and store it in memory
+        with open('input.txt', 'r') as f:
+            text = f.read()
+        enc = tiktoken.get_encoding('gpt2')
+        tokens = enc.encode(text)
+        self.tokens= torch.tensor(tokens)
+        print(f"loaded {len(self.tokens)} tokens")
+        print(f"1 epoch = {len(self.tokens) // (B*T) } batches")
+        #state
+        self.current_position =0
+    
+    def next_batch(self):
+        B, T = self.B, self.T
+        buf = self.tokens[self.current_position : self.current_position+B*T+1]
+        x = (buf[:-1]).view(B, T) # inputs
+        y = (buf[1:]).view(B, T) # targets
+        # advance the position in the tensor
+        self.current_position += B * T #* self.num_processes
+        # if loading the next batch would be out of bounds, advance to next shard
+        if self.current_position + (B * T + 1) > len(self.tokens):
+            self.current_position =0
+            '''
+            self.current_shard = (self.current_shard + 1) % len(self.shards)
+            self.tokens = load_tokens(self.shards[self.current_shard])
+            self.current_position = B * T * self.process_rank
+            '''
+        return x, y
+
+        
+
+torch.manual_seed(1337)
 
 num_return_sequeces=5
 max_length = 30
@@ -229,15 +277,41 @@ elif hasattr(torch.backends, "mps") and torch.backends.mps.is_available():
 print(f"using device: {device}")
 '''
 
-#model = GPT.from_pretrained('gpt2')
-model = GPT(GPTConfig())
-model.eval()
-model.to(device)
+train_loader = DataLoaderLite(B=4, T=32)
 
+
+#torch.set_float32_matmul_precision('high')
+#model = GPT.from_pretrained('gpt2')
+model = GPT(GPTConfig(vocab_size=50304))
+
+
+#model.eval()
+model.to(device)
+#logits, loss = model(x,y)
+model = torch.compile(model)
+
+optimizer = torch.optim.AdamW(model.parameters(), lr=3e-4)
+
+for i in range(50):
+    t0 = time.time()
+    x,y = train_loader.next_batch()
+    optimizer.zero_grad()
+    logits, loss = model(x,y)
+    #import code; code.interact(local= locals())
+    loss.backward()
+    optimizer.step()
+    t1= time.time()
+    dt = (t1-t0)*1000 # time difference in ms
+    tokens_per_sec = (train_loader.B* train_loader.T)/(t1-t0)
+    print(f"step {i}, loss: {loss.item()}, dt: {dt:.2f}ms, tok/sec: {tokens_per_sec:.2f}")
+ 
+
+
+print(loss)
+
+print(logits.shape)
 print("success !")
 
-#prefix token
-import tiktoken
 enc = tiktoken.get_encoding('gpt2')
 tokens = enc.encode("Hello, I'm a language model,")
 tokens = torch.tensor(tokens,  dtype= torch.long) #(8)
@@ -262,9 +336,6 @@ for i in range(num_return_sequeces):
     tokens = x[i, :max_length].tolist()
     decoded = enc.decode(tokens)
     print("x", decoded)
-
-
-
 
 
 
