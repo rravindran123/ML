@@ -124,7 +124,7 @@ class GPT(nn.Module):
         pos = torch.arange(0, T, dtype=torch.long, device=idx.device) # shape (T)
         
         pos_emb = self.transformer.wpe(pos) # position embeddings of shape (T, n_embd)
-       # import sys; sys.exit(0)
+       #import sys; sys.exit(0)
         tok_emb = self.transformer.wte(idx) # token embeddings of shape (B, T, n_embd)
 
         
