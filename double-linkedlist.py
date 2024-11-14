@@ -10,6 +10,8 @@ class data:
     def __str__(self):
         return f" name: {self.name}, salary: {self.salary}"
 
+    def __eq__(self, obj):
+        return (self.name==obj.name and self.salary==obj.salary)
 
 class node:
     def __init__(self, _data):
@@ -22,18 +24,66 @@ class dll:
     def __init__(self):
         self.head:node = None
         self.tail:node = None
+        self.numItems=0
     
     #add _data to the end of the list
     def append(self, _data):
         if not self.head:
             newData = node(_data)
             self.head=self.tail= newData
+            self.numItems+=1
         else:
             newData = node(_data)
             self.tail.next_item = newData
             newData.prev_item = self.tail
             self.tail=newData
+            self.numItems+=1
     
+    def popleft(self):
+        assert self.head != None, "List is empty, cannot pop from left"
+        old_head = self.head
+        if self.head.next_item != None:
+            self.head.next_item.prev_item= None
+            self.head=self.head.next_item
+            self.numItems -=1
+        else:
+            self.head= self.tail= None
+            self.numItems -=1
+
+        old_head.next_item= None
+        old_head.prev_item= None
+        return old_head
+
+    def remove(self, user):
+        assert self.head != None, "List is empty"
+        currentptr = self.head
+
+        while currentptr != None:
+            if currentptr.userdata == user:
+                if self.numItems==1:
+                    print("Matched only item in the list..")
+                    self.head= self.tail= None
+                    self.numItems -=1
+                elif self.numItems==2:
+                    if currentptr.prev_item == None:
+                        self.head = currentptr.next_item
+                        currentptr.next_item= None
+                        self.numItems -=1
+                    elif currentptr.next_item == None:
+                        self.tail = currentptr.prev_item
+                        currentptr.prev_item = None
+                        self.numItems -=1
+                else:
+                    currentptr.prev_item.next_item=currentptr.next_item
+                    currentptr.next_item.prev_item=currentptr.prev_item
+                    self.numItems -=1
+            else:
+                currentptr=currentptr.next_item
+        return currentptr
+
+
+
+
     def printforward(self):
         if self.head:
             currentNode = self.head
@@ -63,8 +113,14 @@ def main():
     print("Printing from head")
     doubleLinkedList.printforward()
 
-    print("Printing from tail")
-    doubleLinkedList.printbackward()
+    #doubleLinkedList.popleft()
+    doubleLinkedList.remove(data2)
+
+    print("Printing from head")
+    doubleLinkedList.printforward()
+
+    # print("Printing from tail")
+    # doubleLinkedList.printbackward()
 
 
 if __name__== "__main__":
