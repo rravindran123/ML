@@ -1,30 +1,74 @@
-import asyncio
-import time
+import os
+from dataclasses import dataclass
 
 
-async def fetch_data(delay, id):
-    print("fetching data..id", id)
-    await asyncio.sleep(delay)
-    print("data fetched")
-    return {"data":"Some data", "id":id}
-
-async def main():
-    await asyncio.gather(*(fetch_data(i,i) for i in range(5)))
-    # print   ("Start the main routine")
-    # task_1 = fetch_data(2, 1)
-    # task_2 = fetch_data(3,2)
-    # result_1 = await task_1 
-    # result_2 = await task_2
-
-    # print(f"Received result : {result_1}")
-    # print(f"Received result: {result_2}")
-
- 
-#     print("End of main coroutine")
+class data:
+    def __init__(self, _name, _salary):
+        self.name: str = _name
+        self.salary: int = _salary
+    
+    def __str__(self):
+        return f" name: {self.name}, salary: {self.salary}"
 
 
-start_time = time.time()
-asyncio.run(main())
-end_time = time.time()
+class node:
+    def __init__(self, _data):
+        self.userdata : data = _data
+        self.next_item : node = None
+        self.prev_item: node = None
 
-print("Total time: ", (end_time-start_time))
+
+class dll:
+    def __init__(self):
+        self.head:node = None
+        self.tail:node = None
+    
+    #add _data to the end of the list
+    def append(self, _data):
+        if not self.head:
+            newData = node(_data)
+            self.head=self.tail= newData
+        else:
+            newData = node(_data)
+            self.tail.next_item = newData
+            newData.prev_item = self.tail
+            self.tail=newData
+    
+    def printforward(self):
+        if self.head:
+            currentNode = self.head
+            while currentNode!= None:
+                print(f"Node data: {currentNode.userdata}")
+                currentNode = currentNode.next_item
+
+
+    def printbackward(self):
+        if self.tail:
+            currentNode = self.tail
+            while currentNode != None:
+                print(f"Node data: {currentNode.userdata}")
+                currentNode = currentNode.prev_item
+
+def main():
+    doubleLinkedList = dll()
+
+    data1 = data('a', 10000)
+    data2 = data('b', 5000)
+    data3 = data('c', 3000)
+
+    doubleLinkedList.append(data1)
+    doubleLinkedList.append(data2)
+    doubleLinkedList.append(data3)
+
+    print("Printing from head")
+    doubleLinkedList.printforward()
+
+    print("Printing from tail")
+    doubleLinkedList.printbackward()
+
+
+if __name__== "__main__":
+    main()
+
+
+        
