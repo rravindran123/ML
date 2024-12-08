@@ -74,8 +74,8 @@ customerQueue = deque()
 
 def main():
     global currentTime, customerId, eventList, customerQueue
-    simulationTime:float = 10000.0
-    arrivalRate = [0.5, 1.0, 2.0, 3.0]
+    simulationTime:float = 100000.0
+    arrivalRate = [0.5, 0.6, 0.7, 0.8, 0.9, 0.92]
     serviceRate = 1.0
     queuelen=[]
     
@@ -134,7 +134,11 @@ def main():
     
     # plot Arrival/Service-rate versus length of the queue
     sysUtil = [rate/serviceRate for rate in arrivalRate]
+
+    avgQueueLen=[ util/(1-util) for util in sysUtil]
+
     plt.plot(sysUtil, queuelen, marker='o')
+    plt.plot(sysUtil, avgQueueLen, marker='x')
     plt.show()
 
 
