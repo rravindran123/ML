@@ -57,35 +57,42 @@ class dll:
     def remove(self, user):
         assert self.head != None, "List is empty"
         currentptr = self.head
+        removedItem = None
 
         while currentptr != None:
             if currentptr.userdata == user:
+                removedItem = currentptr
                 if self.numItems==1:
                     print("Matched only item in the list..")
                     self.head= self.tail= None
                     self.numItems -=1
+                    break
                 elif self.numItems==2:
                     if currentptr.prev_item == None:
                         self.head = currentptr.next_item
+                        currentptr.next_item.prev_item=None
                         currentptr.next_item= None
                         self.numItems -=1
+                        break
                     elif currentptr.next_item == None:
                         self.tail = currentptr.prev_item
+                        currentptr.prev_item.next_item= None
                         currentptr.prev_item = None
                         self.numItems -=1
+                        break
                 else:
                     currentptr.prev_item.next_item=currentptr.next_item
                     currentptr.next_item.prev_item=currentptr.prev_item
                     self.numItems -=1
+                    break
             else:
                 currentptr=currentptr.next_item
-        return currentptr
-
-
-
+        return removedItem
 
     def printforward(self):
-        if self.head:
+        if self.numItems ==0:
+            print("List is empty")
+        elif self.head:
             currentNode = self.head
             while currentNode!= None:
                 print(f"Node data: {currentNode.userdata}")
@@ -93,7 +100,9 @@ class dll:
 
 
     def printbackward(self):
-        if self.tail:
+        if self.numItems ==0:
+            print("List is empty")
+        elif self.tail:
             currentNode = self.tail
             while currentNode != None:
                 print(f"Node data: {currentNode.userdata}")
@@ -115,12 +124,31 @@ def main():
 
     #doubleLinkedList.popleft()
     doubleLinkedList.remove(data2)
+    doubleLinkedList.remove(data3)
+    doubleLinkedList.remove(data1)
 
-    print("Printing from head")
+    print("dll after removing item")
     doubleLinkedList.printforward()
 
+    doubleLinkedList.append(data1)
+    doubleLinkedList.append(data2)
+    doubleLinkedList.append(data3)
+
     # print("Printing from tail")
-    # doubleLinkedList.printbackward()
+    doubleLinkedList.printbackward()
+
+    #add user data reading from a file
+    with open("userdata.txt", 'r') as file:
+        for line in file:
+            name, salary = line.split(" ")
+            salary = int(salary)
+            data_instance = data(name, salary)
+            doubleLinkedList.append(data_instance)
+
+    # print("Printing from tail")
+    doubleLinkedList.printbackward()
+
+
 
 
 if __name__== "__main__":
