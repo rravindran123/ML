@@ -1,0 +1,98 @@
+New customer arrival created id/time/queuesize: 1 / 0.5031499664997645 / 1
+Tokens in the bucket : 10
+Allow user request
+New customer arrival created id/time/queuesize: 2 / 1.1051075037212035 / 1
+Tokens in the bucket : 10
+Allow user request
+New customer arrival created id/time/queuesize: 3 / 1.2095666691643205 / 1
+Tokens in the bucket : 10
+Allow user request
+New customer arrival created id/time/queuesize: 4 / 1.3126296645951443 / 1
+Tokens in the bucket : 9
+Allow user request
+New customer arrival created id/time/queuesize: 5 / 1.502664976344959 / 1
+Tokens in the bucket : 8
+Allow user request
+New customer arrival created id/time/queuesize: 6 / 1.8219010197955123 / 1
+Tokens in the bucket : 8
+Allow user request
+New customer arrival created id/time/queuesize: 7 / 2.7884605539786023 / 1
+Tokens in the bucket : 8
+Allow user request
+New customer arrival created id/time/queuesize: 8 / 3.462003086668755 / 1
+Tokens in the bucket : 10
+Allow user request
+New customer arrival created id/time/queuesize: 9 / 3.968823300739352 / 1
+Tokens in the bucket : 10
+Allow user request
+New customer arrival created id/time/queuesize: 10 / 4.094966850164207 / 1
+Tokens in the bucket : 10
+Allow user request
+New customer arrival created id/time/queuesize: 11 / 4.176083526991572 / 1
+Tokens in the bucket : 9
+Allow user request
+New customer arrival created id/time/queuesize: 12 / 4.4891720413407405 / 1
+Tokens in the bucket : 8
+Allow user request
+New customer arrival created id/time/queuesize: 13 / 4.595962356407886 / 1
+Tokens in the bucket : 8
+Allow user request
+New customer arrival created id/time/queuesize: 14 / 4.730816779503238 / 1
+Tokens in the bucket : 7
+Allow user request
+New customer arrival created id/time/queuesize: 15 / 5.010929261130251 / 1
+Tokens in the bucket : 6
+Allow user request
+New customer arrival created id/time/queuesize: 16 / 5.426630091862176 / 1
+Tokens in the bucket : 6
+Allow user request
+New customer arrival created id/time/queuesize: 17 / 5.951555373866418 / 1
+Tokens in the bucket : 6
+Allow user request
+New customer arrival created id/time/queuesize: 18 / 5.95753249448917 / 1
+Tokens in the bucket : 7
+Allow user request
+New customer arrival created id/time/queuesize: 19 / 6.132273512252487 / 1
+Tokens in the bucket : 6
+Allow user request
+New customer arrival created id/time/queuesize: 20 / 6.790910895680684 / 1
+Tokens in the bucket : 6
+Allow user request
+New customer arrival created id/time/queuesize: 21 / 7.032243662524677 / 1
+Tokens in the bucket : 7
+Allow user request
+New customer arrival created id/time/queuesize: 22 / 7.324250520263809 / 1
+Tokens in the bucket : 7
+Allow user request
+New customer arrival created id/time/queuesize: 23 / 7.424190116816093 / 1
+Tokens in the bucket : 7
+Allow user request
+New customer arrival created id/time/queuesize: 24 / 7.464594772623981 / 1
+Tokens in the bucket : 6
+Allow user request
+New customer arrival created id/time/queuesize: 25 / 7.694597444989581 / 1
+Tokens in the bucket : 5
+Allow user request
+New customer arrival created id/time/queuesize: 26 / 7.957165805764395 / 1
+Tokens in the bucket : 5
+Allow user request
+New customer arrival created id/time/queuesize: 27 / 8.407464935204562 / 1
+Tokens in the bucket : 5
+Allow user request
+New customer arrival created id/time/queuesize: 28 / 8.66596166713544 / 1
+Tokens in the bucket : 5
+Allow user request
+New customer arrival created id/time/queuesize: 29 / 8.671686488248532 / 1
+Tokens in the bucket : 5
+Allow user request
+New customer arrival created id/time/queuesize: 30 / 9.452691904834134 / 1
+Tokens in the bucket : 4
+Allow user request
+New customer arrival created id/time/queuesize: 31 / 9.671625499686128 / 1
+Tokens in the bucket : 5
+Allow user request
+New customer arrival created id/time/queuesize: 32 / 10.148310333896216 / 1
+Tokens in the bucket : 5
+Allow user request
+New customer arrival created id/time/queuesize: 33 / 10.28545051980344 / 1
+Tokens in the bucket : 5
