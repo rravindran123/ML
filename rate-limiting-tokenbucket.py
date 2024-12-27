@@ -3,6 +3,7 @@ import time
 import numpy as np
 from dataclasses import dataclass
 import matplotlib.pyplot as plt
+import random
 
 currentTime =0.0
 arrivalQueue=list()
@@ -49,7 +50,7 @@ class requestQueue:
         arrivalQueue.append(userRequest)
         #sort the arrivalQue based on the time
         arrivalQueue.sort(key=lambda x : x.arrivalTime)
-        print("New customer arrival created id/time:",self.userId,"/",arrivaltime)
+        print("New customer arrival created id/time/queuesize:",self.userId,"/",arrivaltime,"/",len(arrivalQueue))
 
     def getRequest(self):
         returnItem = None
@@ -69,7 +70,7 @@ class requestQueue:
 
 def main():
     simulationTime = 10.0
-    arrivalRate = 2 
+    arrivalRate = 5 
     refillRate = 3
     tokenBucketCap = 10
     
@@ -94,6 +95,9 @@ def main():
         if tbucket.allowRequest():
             print("Allow user request")
             requestQ.delRequest()
+
+        if len(arrivalQueue)>50:
+            break
         
         currentTime = newRequest.arrivalTime
         requestQ.addRequest()
@@ -119,6 +123,7 @@ def main():
     plt.show()
 
 if __name__=="__main__":
+    random.seed(1234)
     main()
     
 
