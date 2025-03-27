@@ -13,6 +13,15 @@ torch._dynamo.config.suppress_errors = True
 
 #from hellaswag import render_example, iterate_examples
 
+import numpy as np
+import torch
+import torch.nn as nn
+from torch.nn import functional as F
+import torch._inductor.config as config
+from torch.nn.parallel import DistributedDataParallel as DDP
+from torch.distributed import init_process_group, destroy_process_group
+from torch.distributed.optim import ZeroRedundancyOptimizer
+import torch.distributed as dist
 
 class CausalSelfAttention(nn.Module):
 
@@ -126,8 +135,6 @@ class GPT(nn.Module):
         pos_emb = self.transformer.wpe(pos) # position embeddings of shape (T, n_embd)
        #import sys; sys.exit(0)
         tok_emb = self.transformer.wte(idx) # token embeddings of shape (B, T, n_embd)
-
-        
         x = tok_emb + pos_emb
         # forward the blocks of the transformer
         for block in self.transformer.h:
@@ -217,14 +224,14 @@ class GPT(nn.Module):
         ]
         num_decay_params = sum(p.numel() for p in decay_params)
         num_nodecay_params = sum(p.numel() for p in nodecay_params)
-        if master_process:
-            print(f"num decayed parameter tensors: {len(decay_params)}, with {num_decay_params:,} parameters")
-            print(f"num non-decayed parameter tensors: {len(nodecay_params)}, with {num_nodecay_params:,} parameters")
+        # if master_process:
+        #     print(f"num decayed parameter tensors: {len(decay_params)}, with {num_decay_params:,} parameters")
+        #     print(f"num non-decayed parameter tensors: {len(nodecay_params)}, with {num_nodecay_params:,} parameters")
         # Create AdamW optimizer and use the fused version if it is available
         fused_available = 'fused' in inspect.signature(torch.optim.AdamW).parameters
         use_fused = fused_available and device_type == "cuda"
-        if master_process:
-            print(f"using fused AdamW: {use_fused}")
+        # if master_process:
+        #     print(f"using fused AdamW: {use_fused}")
         optimizer = torch.optim.AdamW(optim_groups, lr=learning_rate, betas=(0.9, 0.95), eps=1e-8, fused=use_fused)
         return optimizer
     
@@ -261,59 +268,115 @@ class DataLoaderLite:
             '''
         return x, y
 
-        
+
+# learning rate decay scheduler (cosine with warmup)
 
 torch.manual_seed(1337)
+ddp = int(os.environ.get('RANK', -1)) != -1 # is this a ddp run?
+if ddp:
+    # use of DDP atm demands CUDA, we set the device appropriately according to rank
+    assert torch.cuda.is_available(), "for now i think we need CUDA for DDP"
+    init_process_group(backend='nccl')
+    ddp_rank = int(os.environ['RANK'])
+    ddp_local_rank = int(os.environ['LOCAL_RANK'])
+    ddp_world_size = int(os.environ['WORLD_SIZE'])
+    device = f'cuda:{ddp_local_rank}'
+    torch.cuda.set_device(device)
+    master_process = ddp_rank == 0 # this process will do logging, checkpointing etc.
+    seed_offset = 0 # each process gets the exact same seed
+    zero_stage = args.zero_stage
+else:
+    ddp_rank = 0
+    ddp_local_rank = 0
+    zero_stage = 0
+    ddp_world_size = 1
+    master_process = True
+    seed_offset = 0
+    # select the device
+    #attempt to detect the device
+    device = "cpu"
+    if torch.cuda.is_available():
+        device = "cuda"
+    elif hasattr(torch.backends, "mps") and torch.backends.mps.is_available():
+        device = "mps"
+    print(f"using device: {device}")
 
 num_return_sequeces=5
 max_length = 30
-
-device = "cpu"
-'''
-if torch.cuda.is_available():
-    device = "cuda"
-elif hasattr(torch.backends, "mps") and torch.backends.mps.is_available():
-    device = "mps"
-print(f"using device: {device}")
-'''
-
-train_loader = DataLoaderLite(B=4, T=32)
+max_lr = 6e-4
+min_lr = max_lr * 0.1
+warmup_steps = 10
+max_steps = 50
+_B=8
+_T=1024
+total_batch_size = 524488
+grad_accum_steps = total_batch_size // (_B*_T)
 
 
-#torch.set_float32_matmul_precision('high')
+def get_lr(it):
+    #min_lr = args.learning_rate * args.learning_rate_decay_frac
+    # 1) linear warmup for warmup_iters steps
+    if it < warmup_steps:
+        return max_lr * (it+1) /warmup_steps
+    # 2) if it > lr_decay_iters, return min learning rate
+    if it > max_steps:
+        return min_lr
+    # 3) in between, use cosine decay down to min learning rate
+    decay_ratio = (it - warmup_steps) / (max_steps - warmup_steps)
+    assert 0 <= decay_ratio <= 1
+    coeff = 0.5 * (1.0 + math.cos(math.pi * decay_ratio)) # coeff starts at 1 and goes to 0
+    return min_lr + coeff * (max_lr - min_lr)
+
+
+train_loader = DataLoaderLite(B=_B, T=_T)
+torch.set_float32_matmul_precision('high')
 #model = GPT.from_pretrained('gpt2')
 model = GPT(GPTConfig(vocab_size=50304))
 
 #model.eval()
 model.to(device)
 #logits, loss = model(x,y)
-#model = torch.compile(model)
+model = torch.compile(model)
+if ddp:
+    model = DDP(model, device_ids=[ddp_local_rank])
 
-optimizer = torch.optim.AdamW(model.parameters(), lr=3e-4)
+#optimizer = torch.optim.AdamW(model.parameters(), lr=3e-4)
+optimizer = model.configure_optimizers(weight_decay=0.1, learning_rate=6e-4, device_type=device)
 
-for i in range(50):
+for step in range(max_steps):
     t0 = time.time()
-    x,y = train_loader.next_batch()
+    #x,y = train_loader.next_batch()
     optimizer.zero_grad()
-    logits, loss = model(x,y)
-    #import code; code.interact(local= locals())
-    loss.backward()
+    loss_accum = 0
+    for micro_step in range(grad_accum_steps):
+        x,y = train_loader.next_batch()
+        x, y = x.to(device), y.to(device)
+        with torch.autocast(device_type=device, dtype=torch.float16):
+            logits, loss = model(x, y)
+        loss = loss / grad_accum_steps
+        loss_accum += loss.detach()
+        loss.backward()
+        #import code; code.interact(local= locals())
+        #loss.backward()
+    norm= torch.nn.utils.clip_grad_norm_(model.parameters(), 1.0)
+    lr = get_lr(step)
+    for param_group in optimizer.param_groups:
+        param_group['lr'] = lr
     optimizer.step()
+    torch.cuda.synchronize()
     t1= time.time()
     dt = (t1-t0)*1000 # time difference in ms
-    tokens_per_sec = (train_loader.B* train_loader.T)/(t1-t0)
-    print(f"step {i}, loss: {loss.item()}, dt: {dt:.2f}ms, tok/sec: {tokens_per_sec:.2f}")
+    tokens_per_sec = (train_loader.B* train_loader.T*grad_accum_steps)/(t1-t0)
+    print(f"step {step}, loss: {loss.item()}, norm: {norm:.4f}, lr: {lr:.4f}, dt: {dt:.2f}ms, tok/sec: {tokens_per_sec:.2f}")
  
-
-
 print(loss)
-
 print(logits.shape)
 print("success !")
 
 enc = tiktoken.get_encoding('gpt2')
-tokens = enc.encode("Hello, I'm a language model,")
-tokens = torch.tensor(tokens,  dtype= torch.long) #(8)
+text = "what is the capital of france ?"
+tokens = enc.encode(text)
+tokens = torch.tensor(tokens, dtype=torch.long).to(device) #(8)
 tokens = tokens.unsqueeze(0).repeat(num_return_sequeces,1 )
 #x= tokens.to('cuda')
 x=tokens
