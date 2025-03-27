@@ -196,6 +196,7 @@ class router():
         self.egressFwd.listEgressQueue()
 
 def main():
+    simuTime = 10
     portBw = 100
     router1 = router(4,4, portBw)
     router1.addRoutingEntry(ipaddress="10.1.1.0/24", egressport={1,2})
@@ -221,6 +222,21 @@ def main():
     # router1.handleIngressEvent(packet1, 0)
     # router1.handleIngressEvent(packet2, 1)
     # router1.handleIngressEvent(packet3, 2)
+
+    # simulate the router with the event list generating the packets till the en do the simulation
+    while currenttime < simuTime:
+        eventList.sort(key=lambda x: x.timestamp)
+        eventItem = eventList.pop(0)
+        
+        currenttime = eventItem.timestamp
+        if eventItem.eventType == enumType.ingress:
+            router1.handleIngressEvent(eventItem.packet, 0)
+        elif eventItem.eventType == enumType.egress:
+            router1.handleEgressEvent(eventItem.packet, 0)
+        else:
+            print(f"Unknown event type")
+        time.sleep(0.1)
+        #print(f"Current time: {currenttime}")    
 
 
 
