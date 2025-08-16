@@ -1,3 +1,11 @@
-./data
-./transformer/tokenizer_en.json
-./transformer/tokenizer_it.json
+# data and artifacts
+/data
+/transformer/tokenizer_en.json
+/transformer/tokenizer_it.json
+
+# python build junk
+__pycache__/
+*.pyc
+
+# notebooks (optional)
+*.ipynb
