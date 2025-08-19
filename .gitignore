@@ -2,6 +2,7 @@
 data
 transformer/tokenizer_en.json
 transformer/tokenizer_it.json
+transformer/weights
 
 # python build junk
 __pycache__/
