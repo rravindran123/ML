@@ -1,4 +1,4 @@
-from vision_data import *
+from vision_model import *
 from timeit import default_timer as timer   
 from tqdm.auto import tqdm
 
@@ -13,7 +13,7 @@ device = get_device()
 print("device:", device ,"being used for training")
 
 #model_0= fashion_minst_model_v0(input_shape=784, hidden_units=10, output_shape=len(class_names))
-model_0= fashion_minst_model_v1(input_shape=784, hidden_units=10, output_shape=len(class_names))
+model_0= fashion_minst_model_v2(input_shape=1, hidden_units=10, output_shape=len(class_names))
 model_0.to(device)
 
 print(model_0)

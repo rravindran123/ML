@@ -107,6 +107,54 @@ class fashion_minst_model_v1(nn.Module):
     def forward(self, x):
         return self.layer_stack(x)
 
+class fashion_minst_model_v2(nn.Module):
+    """
+    Model architecture copying TinyVGG from: 
+    https://poloclub.github.io/cnn-explainer/
+    """
+    def __init__(self, input_shape:int, hidden_units:int, output_shape:int):
+        super().__init__()
+        self.block1 = nn.Sequential(
+            nn.Conv2d(in_channels = input_shape,
+                      out_channels = hidden_units,
+                      kernel_size =3,
+                      stride=1,
+                      padding=1),
+            nn.ReLU(),
+            nn.Conv2d(in_channels=hidden_units,
+                      out_channels=hidden_units,
+                      kernel_size=3,
+                      stride=1,
+                      padding=1),
+            nn.ReLU(),
+            nn.MaxPool2d(kernel_size=2, stride=2)
+        )
+        self.block2 = nn.Sequential(
+            nn.Conv2d(hidden_units, hidden_units, 3, padding=1),
+            nn.ReLU(),
+            nn.Conv2d(hidden_units, hidden_units, 3, padding=1),
+            nn.ReLU(),
+            nn.MaxPool2d(2)
+        )
+        self.classifier = nn.Sequential(
+            nn.Flatten(),
+            nn.Linear(in_features=hidden_units*7*7, 
+                      out_features=output_shape)
+        )
+    def forward(self, x:torch.Tensor):
+        x= self.block1(x)
+      #  print(x.shape)
+        x= self.block2(x)
+      #  print(x.shape)
+        x= self.classifier(x)
+        return x
+
+torch.manual_seed(42)
+device="mps"
+model_2 = fashion_minst_model_v2(input_shape=1, 
+    hidden_units=10, 
+    output_shape=len(class_names)).to(device)
+print(model_2)
 
 # check for the device
 def get_device():
