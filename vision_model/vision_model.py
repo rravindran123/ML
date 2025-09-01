@@ -49,13 +49,13 @@ torch.manual_seed(42)
 fig = plt.figure(figsize=(9,9))
 rows, cols = 4,4
 
-for i in range(1, rows*cols + 1):
-    random_idx = torch.randint(0, len(train_data), size=[1]).item()
-    img, label = train_data[random_idx]
-    fig.add_subplot(rows, cols, i)
-    plt.imshow(img.squeeze(), cmap="grey")
-    plt.title(class_names[label])
-    plt.axis(False)
+# for i in range(1, rows*cols + 1):
+#     random_idx = torch.randint(0, len(train_data), size=[1]).item()
+#     img, label = train_data[random_idx]
+#     fig.add_subplot(rows, cols, i)
+#     plt.imshow(img.squeeze(), cmap="grey")
+#     plt.title(class_names[label]) 
+#     plt.axis(False)
 #plt.show()
 
 from torch.utils.data import DataLoader
@@ -151,10 +151,10 @@ class fashion_minst_model_v2(nn.Module):
 
 torch.manual_seed(42)
 device="mps"
-model_2 = fashion_minst_model_v2(input_shape=1, 
-    hidden_units=10, 
-    output_shape=len(class_names)).to(device)
-print(model_2)
+# model_2 = fashion_minst_model_v2(input_shape=1, 
+#     hidden_units=10, 
+#     output_shape=len(class_names)).to(device)
+# print(model_2)
 
 # check for the device
 def get_device():
@@ -191,7 +191,7 @@ def accuracy_fn(y_true, y_pred):
 
 def print_time(start:float, end:float, device:torch.device=None):
     total_time = end-start
-    response= f"Train time on device {device}: totaltime: {total_time}"
+    response= {"Training time": total_time}
     return response
 
 def eval_model(model: torch.nn.Module, data_loader: torch.utils.data.DataLoader, loss_fn: torch.nn.Module, accuracy_f, device):
@@ -229,8 +229,8 @@ def eval_model(model: torch.nn.Module, data_loader: torch.utils.data.DataLoader,
     acc /= len(data_loader)
 
     return {"model_name": model.__class__.__name__, # only works when model was created with a class
-            "model_loss": f"{loss:.3f}",
-            "model_acc": f"{acc:.3f}"}
+            "model_loss": loss,
+            "model_acc": acc}
        
 #creating a training loop and training a model on batches of data
 
@@ -298,7 +298,33 @@ def test_step(model: torch.nn.Module,
 
         print(f"Test loss: {test_loss:.5f} | Test accuracy: {test_acc:.2f}%\n")
 
-    
+def make_predictions(model: torch.nn.Module, data:list, device:torch.device= "mps"):
+
+    pred_probs = []
+
+    model.eval()
+
+    with torch.inference_mode():
+        
+        for sample in data:
+            #prepare sample
+            sample = sample.to(device)
+            sample = torch.unsqueeze(sample, dim=0)
+
+            #forward pass 
+            pred_logit = model(sample)
+
+            #print(f"shape of pred logit : {pred_logit.shape}")
+
+            #get prediction probability (logit -> prediction probability)
+            pred_prob= torch.softmax(pred_logit.squeeze(), dim=0)
+
+            #get pred_prob  off GPU for further calculations
+            pred_probs.append(pred_prob.cpu())
+
+    #stack the pred_probs to turn list into a tensor
+    return torch.stack(pred_probs)
+
 
     
 
