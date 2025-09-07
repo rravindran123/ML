@@ -3,13 +3,16 @@ from timeit import default_timer as timer
 from tqdm.auto import tqdm
 import pandas as pd
 import random
+import matplotlib.pyplot as plt
+import torch
+from pathlib import Path
 
 #import tqdm for progress bar
 torch.manual_seed(42)
 train_time_start_time = timer()
 
 #number of epochs
-epochs=10
+epochs=3
 
 device = get_device()
 print("device:", device ,"being used for training")
@@ -28,44 +31,57 @@ models =[
 results=[]
 training_time=[]
 
-for m in models:
-    m.to(device)
-    loss_fn = nn.CrossEntropyLoss()
-    optimizer = torch.optim.SGD(params=m.parameters(), lr=0.1)
+MODEL_PATH = Path("models")
+MODEL_PATH.mkdir(parents = True,  exist_ok=True)
+MODEL_NAME=["vision_model_1", "vision_model_2", "vision_model_3"]
+MODEL_SAVE_PATH=[MODEL_PATH/MODEL_NAME[0], MODEL_PATH/MODEL_NAME[1], MODEL_PATH/MODEL_NAME[2]]
 
-    #create training and testing loops
-    for epoch in tqdm(range(epochs)):
-        print(f"Epoch: {epoch}\n...")
 
-        train_step(model=m, data_loader=train_dataloader,loss_fn =loss_fn,
-                optimizer=optimizer, accuracy_fn=accuracy_fn, device=device)
+def train():
+    findex =0
+    for m in models:
+        m.to(device)
+        loss_fn = nn.CrossEntropyLoss()
+        optimizer = torch.optim.SGD(params=m.parameters(), lr=0.1)
 
-        test_step(model=m, data_loader=test_dataloader,loss_fn =loss_fn,
-                accuracy_fn=accuracy_fn, device=device)
+        #create training and testing loops
+        for epoch in tqdm(range(epochs)):
+            print(f"Epoch: {epoch}\n...")
+
+            train_step(model=m, data_loader=train_dataloader,loss_fn =loss_fn,
+                    optimizer=optimizer, accuracy_fn=accuracy_fn, device=device)
+
+            test_step(model=m, data_loader=test_dataloader,loss_fn =loss_fn,
+                    accuracy_fn=accuracy_fn, device=device)
+            
+        #calcuate training time
+        train_time_end_time = timer()
+        total_train_time_model_0 = print_time(start=train_time_start_time, 
+                                                end=train_time_end_time,
+                                                device=str(next(m.parameters()).device))
+
+        training_time.append(total_train_time_model_0)
+
+        # Calculate model 0 results on test dataset
+        results.append(eval_model(model=m, data_loader=test_dataloader, loss_fn=loss_fn, 
+                                accuracy_f=accuracy_fn, device=device))
         
-    #calcuate training time
-    train_time_end_time = timer()
-    total_train_time_model_0 = print_time(start=train_time_start_time, 
-                                            end=train_time_end_time,
-                                            device=str(next(m.parameters()).device))
+        torch.save(obj=m.state_dict(), f=MODEL_SAVE_PATH[findex]) # only saving the state_dict() only saves the learned parameters
+            
+        findex +=1
 
-    training_time.append(total_train_time_model_0)
+    for output in results:
+        print(f"{output}\n")
 
-    # Calculate model 0 results on test dataset
-    results.append(eval_model(model=m, data_loader=test_dataloader, loss_fn=loss_fn, 
-                              accuracy_f=accuracy_fn, device=device))
-for output in results:
-    print(f"{output}\n")
+    compare_results = pd.DataFrame(results)
+    training_df = pd.DataFrame(training_time)
 
-compare_results = pd.DataFrame(results)
-training_df = pd.DataFrame(training_time)
+    print(compare_results)
+    print(training_time)
 
-print(compare_results)
-print(training_time)
-
-#compare_results["trainging_time"]=training_time
-compare_results= pd.concat([compare_results, training_df], axis=1)
-print(compare_results)
+    #compare_results["trainging_time"]=training_time
+    compare_results= pd.concat([compare_results, training_df], axis=1)
+    print(compare_results)
 
 # Visualize our model results
 # compare_results.set_index("model_name")["model_acc"].plot(kind="barh")
@@ -73,18 +89,5 @@ print(compare_results)
 # plt.ylabel("model")
 # plt.show()
 
-test_samples =[]
-test_labels =[]
-
-for sample, label in random.sample(list(test_data), k=9):
-    test_samples.append(sample)
-    test_labels.append(label)
-
-print(f"Test sample image shape: {test_samples[0].shape}\nTest sample label: {test_labels[0]} ({class_names[test_labels[0]]})")
-
-pred_prob = make_predictions(model=models[2], data=test_samples)
-print(pred_prob[:2])
-
-pred_class = pred_prob.argmax(dim=1)
-print(pred_class)
-print(test_labels)
+if __name__ == "__main__":
+    train()

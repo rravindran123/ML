@@ -301,11 +301,9 @@ def test_step(model: torch.nn.Module,
 def make_predictions(model: torch.nn.Module, data:list, device:torch.device= "mps"):
 
     pred_probs = []
-
     model.eval()
 
     with torch.inference_mode():
-        
         for sample in data:
             #prepare sample
             sample = sample.to(device)
@@ -315,7 +313,6 @@ def make_predictions(model: torch.nn.Module, data:list, device:torch.device= "mp
             pred_logit = model(sample)
 
             #print(f"shape of pred logit : {pred_logit.shape}")
-
             #get prediction probability (logit -> prediction probability)
             pred_prob= torch.softmax(pred_logit.squeeze(), dim=0)
 
@@ -324,6 +321,8 @@ def make_predictions(model: torch.nn.Module, data:list, device:torch.device= "mp
 
     #stack the pred_probs to turn list into a tensor
     return torch.stack(pred_probs)
+
+
 
 
     
