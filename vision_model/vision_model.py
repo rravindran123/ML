@@ -322,6 +322,54 @@ def make_predictions(model: torch.nn.Module, data:list, device:torch.device= "mp
     #stack the pred_probs to turn list into a tensor
     return torch.stack(pred_probs)
 
+from timeit import default_timer as timer
+import time
+
+if __name__ == "__main__":
+    device = get_device()
+    print(f"Using device: {device}")
+
+    torch.manual_seed(42)
+    model = fashion_minst_model_v2(input_shape=1,
+                                   hidden_units=10,
+                                   output_shape=len(class_names)).to(device)
+
+    loss_fn = nn.CrossEntropyLoss()
+    optimizer = torch.optim.Adam(params=model.parameters(), lr=0.001)
+
+    start_time = timer()
+
+    epochs = 5
+    print("Starting training...")
+    for epoch in range(epochs):
+        print(f"Epoch: {epoch}\n-------")
+        train_step(model=model,
+                   data_loader=train_dataloader,
+                   loss_fn=loss_fn,
+                   optimizer=optimizer,
+                   accuracy_fn=accuracy_fn,
+                   device=device)
+        test_step(model=model,
+                  data_loader=test_dataloader,
+                  loss_fn=loss_fn,
+                  accuracy_fn=accuracy_fn,
+                  device=device)
+
+    end_time = timer()
+    print(f"Total training time: {end_time-start_time:.3f} seconds")
+
+    print("Evaluating model...")
+    model_results = eval_model(
+        model=model,
+        data_loader=test_dataloader,
+        loss_fn=loss_fn,
+        accuracy_f=accuracy_fn,
+        device=device
+    )
+    print("Evaluation results:")
+    print(model_results)
+
+
 
 
 
